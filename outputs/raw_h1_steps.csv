@@ -1,0 +1,23 @@
+step,metric,value
+timezone,part1_rows_shifted_1h,2795917
+overlap,part2_rows_dropped,944950
+overlap,part1_last,2014-10-01 00:27:07+00:00
+invalid,iam_over_4kW,3895
+invalid,aggregate_over_15kW,171
+invalid,negative,0
+duplicates,exact_dupes_dropped,884254
+duplicates,conflicting_rows_merged,131831
+duplicates,rows_after,6557728
+resample,minutes,920091
+resample,minutes_with_no_aggregate_pct,13.28
+iam_exceeds_aggregate,iam_minutes_set_nan,3821
+iam_exceeds_aggregate,by_channel,"{'Appliance1': 177, 'Appliance2': 83, 'Appliance3': 50, 'Appliance4': 372, 'Appliance5': 403, 'Appliance6': 185, 'Appliance7': 40, 'Appliance8': 13, 'Appliance9': 2498}"
+gaps,short_gap_minutes_filled,812
+gaps,outages_over_5min,408
+gaps,outage_minutes,121355
+gaps,longest_outage_days,41.6
+check_vs_official,overlap_minutes,797815
+check_vs_official,corr_ours,0.997
+check_vs_official,mae_ours_W,4.4
+check_vs_official,corr_naive_raw,0.7683
+check_vs_official,mae_naive_raw_W,89.5

@@ -1,0 +1,7 @@
+# REFIT data is large and CC-BY licensed at source; download with src/get_data.py
+data/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.claude/
+outputs/run_all.log

@@ -1,0 +1,3 @@
+file,rows,first,last,time_parse_failures,out_of_order_steps,duplicate_timestamps,exact_duplicate_rows,median_interval_s,p99_interval_s,gaps_over_5min,gaps_over_1h,longest_gap_h,nan_cells_pct,aggregate_over_15kW,iam_over_4kW,negative_values,max_iam_value,max_aggregate
+Part1,4377877,2013-10-09 14:06:17,2014-10-01 01:27:07,0,1,1004404,884307,3.0,15.0,380,14,998.4,0.0,82,3038,0,98301.0,24000.0
+Part2,4140886,2014-06-27 21:57:49,2015-07-10 11:56:32,0,0,14755,393,7.0,9.0,72,19,207.6,12.76,104,911,0,98301.0,29159.0
