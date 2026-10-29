@@ -1,52 +1,58 @@
-# Recommendation: washing-machine disaggregation for utility use
+# Recommendation: using washing-machine disaggregation at a utility
 
-**Bottom line:** using only a home's 1-minute whole-house meter, the model finds about **8 in 10 washes** in homes it has never seen. Its **daily** washing-machine energy estimate is 28% more accurate than assuming zero. It is ready for **aggregated and pattern-based insights** (when and how often a home washes, which homes are heavy users). It is **not** ready for exact per-home kWh figures on a bill. Tested on 12 UK homes from REFIT, 2013–2015, holding out one home at a time.
+**In short:** using nothing but a home's 1-minute smart meter reading, the model spots about 8 out of 10 washes in homes it has never seen before, and its daily estimate of washing-machine energy is 28% more accurate than assuming zero. That's good enough for insights about patterns and for grouping customers, such as when and how often a home washes, or which homes are heavy users. It isn't good enough yet to put an exact washing-machine kWh figure on one customer's bill. These results come from 12 UK homes in the REFIT study (2013 to 2015), testing on each home in turn after training on the other 11.
 
-## Suitable uses
+## What it's good for
 
-| Use | Why it is supported |
+| Use | Why it holds up |
 |---|---|
-| Detect whether, how often and when a home washes | 81% of washes found; the start-hour pattern is reliable |
-| Rank or segment customers (heavy washers, peak-time washers) | Wash days are clearly separated from non-wash days in most homes |
-| Portfolio-level estimates (e.g. washing load at 08:00–11:00 across a feeder) | Errors cancel out across homes: −3% total energy error pooled over 12 homes |
+| Spotting whether, how often and when a home does its washing | 81% of washes are caught, and the start-time pattern comes through reliably |
+| Grouping or ranking customers, for example heavy washers or people who wash at peak times | In most homes, washing days stand out clearly from non-washing days |
+| Estimates across many homes, for example the total washing load on a feeder between 8 and 11am | Mistakes cancel out across homes: over all 12, the total energy estimate was within 3% |
 
-## Not suitable (yet)
+## What it's not ready for
 
-* **An exact kWh figure for one home's washing machine.** Single-home totals can be off by ±50–100%.
-* **Automated decisions or penalties for an individual customer.** About 6 in 10 predicted washes are other heating appliances such as showers, ovens and dishwashers.
-* **Homes with unusual machines.** One test home with a short-burst heater was mostly missed. **Data at 15 or 30 minutes**: see below.
+- **Quoting one home's exact washing-machine kWh.** For an individual home, the total can be off by 50% to 100%.
+- **Making automatic decisions about, or penalising, an individual customer.** Roughly 6 in 10 predicted washes are really another heating appliance, such as a shower, oven or dishwasher.
+- **Homes with unusual machines.** In one test home, the washing machine heated in short bursts and the model missed most of its washes.
+- **Data at 15 or 30 minutes.** See the last section below.
 
 ---
 
 ## Section 4 answers
 
-### Opportunity: shift washes out of the morning peak and toward cheap off-peak hours
+### An opportunity: moving washes out of peak times
 
-**Finding.** 44% of washes start between 07:00 and 12:00, and the busiest slot is Saturday 09:00. Two of the 12 homes already use delay timers to wash at night: House 19 starts 58% of washes between 22:00 and 01:00, and House 1 starts 21% between 03:00 and 06:00. Each wash draws about **2 kW for 10–25 minutes**, a large, short and **movable** block. Nearly every modern machine has a delay-start button, so shifting a wash needs no new hardware.
+**What I found.** Of all washes, 44% start between 7am and noon, and the single busiest time is Saturday at 9am. Two of the 12 homes already use their delay timers to wash at night: House 19 starts 58% of its washes between 10pm and 1am, and House 1 starts 21% between 3am and 6am. Each wash draws about 2 kW for 10 to 25 minutes. That's a big, short block of demand that can easily be moved, since nearly every modern machine has a delay-start button and no new equipment is needed.
 
-**Offer.** Customers the model flags as frequent morning or evening-peak washers get a tailored message ("Your washing machine usually runs around 9 am. Setting the delay timer to finish by 7 am on the off-peak rate would save about £X a year"). Where a time-of-use tariff or a demand-flexibility event exists, link it to that.
+**What I'd offer.** Customers the model picks out as regular morning- or evening-peak washers would get a personalised nudge, something like: "Your washing machine usually runs around 9am. If you set the delay timer to finish by 7am, you could save about £X a year on an off-peak tariff." Where there's a time-of-use tariff or a demand-flexibility event, the message would tie into that.
 
-**Measuring whether it worked.**
-* *Design:* a randomised controlled trial. Randomly split the flagged customers into a group that gets the message and a control group that does not, and record a baseline period of 4–8 weeks before sending.
-* *Primary metric:* the share of detected washes starting in peak hours (e.g. 07:00–11:00 and 16:00–19:00), per customer, before vs after, treatment vs control (difference-in-differences). The same detector is applied to both groups, so its errors affect them equally and the *difference* stays valid.
-* *Secondary metrics:* peak-hour kWh and the 09:00 load at feeder level, and bill savings for customers on time-of-use tariffs.
-* *Ground truth check:* a short in-app or SMS question ("Did you use the delay timer this week?") for a sample of customers, which also gives labelled data to improve the model.
+**How I'd check it worked.**
 
-Total consumption barely changes, because a wash uses the same energy whenever it runs. The value is in **peak reduction and lower cost for the customer**, and the evaluation should be framed that way.
+- **Set-up:** a randomised trial. Take the customers the model flags, record 4 to 8 weeks of normal behaviour first, then randomly split them into a group that gets the message and a group that doesn't.
+- **Main measure:** the share of each customer's detected washes that start at peak times (for example 7 to 11am and 4 to 7pm), compared before and after and between the two groups. The same model is applied to both groups, so its mistakes affect them equally and the difference between them still holds.
+- **Other measures:** peak-time energy use, the 9am load on the local network, and bill savings for customers on time-of-use tariffs.
+- **Ground truth:** a quick text or in-app question to a sample of customers, such as "Did you use the delay timer this week?". It checks the result and gives labelled data to improve the model.
+
+Overall consumption won't really change, because a wash uses the same energy whenever it runs. The value is in lowering peak demand and cutting customers' bills, and that's how the trial should be judged.
 
 ### Limitations
 
-* **Overlapping appliance signatures.** The washing machine's main energy is a ~2 kW heating plateau, and kettles, showers, ovens, dishwashers and tumble dryers create similar blocks. This is the largest source of error (about 61% of predicted washes are false) and the reason we recommend aggregated and pattern-based outputs.
-* **Missing data.** Homes lose 6–25% of minutes to outages, including gaps of weeks. We never fill long gaps. Any customer-facing figure must be calculated over available days and say so (e.g. "based on 26 of 30 days"). The official REFIT "Issues" flag would remove a third of washing-machine minutes, so we did not rely on it.
-* **Household differences.** Washes per week range from 2 to 11, and energy per wash from 0.24 to 0.72 kWh, by machine and programme. A machine unlike those in training (House 19) is mostly missed. Performance in a new market must be checked on a labelled pilot before launch.
-* **Applying UK results to India.** The UK homes are mostly detached houses with heater-equipped washers that heat their own water. Indian homes differ in several ways that matter:
-  * Many machines (semi-automatic top-loaders, many front-loaders on cold washes) have **no heater**, so the 2 kW plateau, the model's strongest clue, is absent. A wash becomes a 200–500 W motor pattern, much harder to separate.
-  * Other dominant loads differ: air conditioners, water heaters (geysers), water pumps, and inverter/UPS battery charging all create large blocks.
-  * There is more voltage variation and more power cuts.
-  * Metering is often single-phase and at lower resolution.
+**Appliances that look alike.** Most of a wash's energy is a heating block of around 2 kW, and kettles, showers, ovens, dishwashers and tumble dryers produce very similar blocks. This is the model's biggest source of error, with about 61% of predicted washes being false alarms, and it's why I'd stick to grouped and pattern-based insights for now.
 
-  The pipeline (cleaning, cycle rule, leave-one-house-out validation) transfers, but **the model must be retrained and re-validated on labelled Indian homes**, and the cycle thresholds re-set (e.g. a lower peak threshold for machines without heaters).
+**Missing data.** Homes lose 6% to 25% of their minutes to outages, sometimes for weeks at a time. I never fill long gaps, so any figure shown to a customer should be worked out over the days that are actually available and say so (for example, "based on 26 of the last 30 days"). The dataset's own "Issues" flag would have removed about a third of the minutes when washing machines are running, so I didn't use it.
 
-### If only 15- or 30-minute smart-meter data were available
+**Differences between homes.** Homes do anywhere from 2 to 11 washes a week, and a wash uses between 0.24 and 0.72 kWh depending on the machine and programme. A machine unlike any in training, like the one in House 19, gets mostly missed. Before launching in a new market, the model should be checked against a small labelled pilot group there.
 
-At 15–30 minutes a single reading averages over most or all of a wash's 10–25 minute heating plateau. The 2 kW block becomes a modest bump of a few hundred watts, the same size as a kettle used a few times or a cooker on low. The tail, start and end that make a wash recognisable are averaged away, and a wash that starts mid-interval is split across two readings. Telling washes apart from other loads would become much harder: we would expect reliable detection only for hot, long programmes in otherwise quiet periods, and much more confusion during busy morning and evening hours. Estimates would have to move to **daily or weekly totals and probabilistic statements** ("likely 3–5 washes this week"). The model would also lean more on habits (time of day, day of week) and household information, so it would generalise worse to unusual homes. Timing insights such as "you wash at 9 am" would still be possible to the nearest half-hour. Exact cycle counts and per-wash energy would not.
+**Using UK results in India.** The REFIT homes are mostly detached UK houses with washing machines that heat their own water. Indian homes differ in ways that matter here:
+
+- Many machines have no heater, including semi-automatic top-loaders and many front-loaders run on cold washes. Without the 2 kW heating block, which is the model's strongest clue, a wash looks like a 200 to 500 W motor pattern that's much harder to pick out.
+- The big appliances are different: air conditioners, water heaters (geysers), water pumps and inverter battery charging all produce large blocks of their own.
+- Voltage varies more and power cuts are more common.
+- Metering is often single-phase and lower resolution.
+
+The overall approach would carry over: the cleaning steps, the wash rule and the leave-one-house-out testing. But the model would need retraining and re-testing on labelled Indian homes, and the wash thresholds would need resetting, for example a lower peak threshold for machines without a heater.
+
+### What changes with 15- or 30-minute data
+
+At 15 or 30 minutes, each reading averages over most or all of a wash's 10 to 25 minute heating block. The 2 kW block shrinks into a bump of a few hundred watts, about the same as boiling a kettle a few times or a hob on low. The details that make a wash recognisable, its tail, start and finish, get averaged away, and a wash that starts mid-interval gets split across two readings. Telling washes apart from everything else becomes much harder. I'd expect to reliably catch only long, hot washes during otherwise quiet periods, and to get far more confused during busy mornings and evenings. Estimates would have to move to daily or weekly totals with a range attached, along the lines of "probably 3 to 5 washes this week". The model would also have to rely more on habits (time of day, day of week) and household details, which means it would cope worse with unusual homes. You could still tell a customer roughly when they wash, to the nearest half hour, but not count individual washes or say how much energy each one used.

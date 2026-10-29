@@ -1,94 +1,112 @@
 # REFIT data cleaning and washing-machine disaggregation
 
-A Flock Energy take-home on the REFIT Electrical Load Measurements dataset (20 UK homes, 2013–2015). It is a small, reproducible pipeline that:
+This is my submission for the Flock Energy data science take-home. It works with the REFIT dataset (20 UK homes, 2013 to 2015) and does three things:
 
-1. **Cleans raw House 1 data** to 1-minute resolution, fixing a daylight-saving error in the raw timestamps, merging overlapping files, removing sensor error codes and duplicates, and flagging outages. The result matches the official cleaned data with correlation 0.997.
-2. **Analyses washing-machine use** in 12 homes from the official cleaned data: 4,566 detected cycles, usage by hour and weekday, and cycle duration, energy and peak compared across homes.
-3. **Estimates washing-machine power from the whole-house meter** with a seq2point-style XGBoost model. It is validated leave-one-house-out against two baselines. On homes it has never seen, it finds 81% of washes and cuts daily energy error by 28% compared with predicting zero.
+1. Cleans the raw House 1 data and resamples it to 1-minute resolution. The trickiest part turned out to be a daylight-saving bug in the raw timestamps. After fixing it, my cleaned series matches the official cleaned data with a correlation of 0.997.
+2. Looks at how washing machines are used across 12 homes, using the official cleaned data. I found 4,566 wash cycles and compared when people wash, how long a cycle takes and how much energy it uses.
+3. Estimates washing-machine power from the whole-house meter alone. On homes the model has never seen, it picks up about 8 in 10 washes and gets daily washing-machine energy 28% closer than simply guessing zero.
 
-| Document | Contents |
-|---|---|
-| [DATA.md](DATA.md) | Raw data coverage and quality findings, cleaning steps, gap and outlier decisions, remaining concerns |
-| [RESULTS.md](RESULTS.md) | Washing-machine EDA, plots, model results, validation, failure analysis, cited papers |
-| [Recommendation.md](Recommendation.md) | One-page utility summary and the Section 4 answers |
+The write-ups are split into three files:
 
-## Setup and run
+- [DATA.md](DATA.md): what the raw data looks like, what was wrong with it, and how I cleaned it
+- [RESULTS.md](RESULTS.md): the washing-machine analysis, the model, how I validated it, and where it fails
+- [Recommendation.md](Recommendation.md): a one-page summary for a utility, plus my answers to the Section 4 questions
 
-Requires Python 3.10+ (tested on 3.13, Windows 11) and roughly 12 GB of free disk space for the extracted csvs.
+There is also `Flock_Energy_REFIT_submission.pdf`, which is the same four documents in one file.
+
+## Dataset
+
+The data is not stored in this repo (the extracted csvs are around 12 GB). It is the **REFIT Electrical Load Measurements** dataset from the University of Strathclyde, released under CC-BY 4.0.
+
+- Dataset page: https://pureportal.strath.ac.uk/en/datasets/refit-electrical-load-measurements/
+- Raw data (.7z, ~700 MB): https://pure.strath.ac.uk/ws/portalfiles/portal/62090177/REFIT_RAW_081116.7z
+- Cleaned data (.7z, ~500 MB): https://pure.strath.ac.uk/ws/portalfiles/portal/62090184/CLEAN_REFIT_081116.7z
+- Cleaned data readme: https://pure.strath.ac.uk/ws/portalfiles/portal/62090183/CLEAN_READ_ME_081116.txt
+
+A note on the links: the `pureportal.strath.ac.uk/files/...` addresses given in the brief returned "403 Forbidden" when I tried them, but the same files download fine from the `pure.strath.ac.uk/ws/portalfiles/...` addresses above. You don't need to fetch anything by hand, though. `src/get_data.py` downloads both archives and pulls out only the files the analysis uses. If you already have the `CLEAN_House*.csv` files, drop them into `data/clean/` and it will use those instead.
+
+Files used:
+
+- Part 1: `RAW_House1_Part1.csv` and `RAW_House1_Part2.csv`
+- Parts 2 and 3: `CLEAN_House{1,2,3,4,5,7,15,16,17,18,19,21}.csv`
+
+## How to run it
+
+You need Python 3.10 or newer (I used 3.13 on Windows 11) and about 12 GB of free disk space.
 
 ```bash
 pip install -r requirements.txt
 python run_all.py
 ```
 
-`run_all.py` runs these scripts in order (each can also be run alone from `src/`):
+That one command downloads the data if it isn't there yet and then runs every step. It takes about 5 minutes on my laptop. XGBoost will use a GPU if it finds one and falls back to the CPU otherwise. The random seed is fixed, though GPU training can still differ in the last decimal place.
 
-| Step | Script | Output |
+You can also run the steps one by one from inside `src/`:
+
+| Step | Script | What it produces |
 |---|---|---|
-| Data | `src/get_data.py` | Downloads the two `.7z` archives (~1.2 GB) and extracts only the files used into `data/raw` and `data/clean`. If you already have the `CLEAN_House*.csv` files, put them in `data/clean/` and they are reused. |
-| Part 1 | `src/part1_clean_raw.py` | `data/interim/raw_h1_cleaned_1min.parquet`, `outputs/raw_h1_*.csv`, `figures/p1_*.png` |
-| Part 2 | `src/part2_wm_eda.py` | `outputs/wm_quality.csv`, `wm_cycles.csv`, `wm_cycle_summary.csv`, `figures/p2_*.png` |
-| Part 3 | `src/part3_model.py` | `outputs/model_metrics*.csv`, `model_daily_energy.csv`, `model_feature_importance.csv`, `figures/p3_*.png` |
-| Ablation | `REFIT_NO_TIME=1 python src/part3_model.py` | `outputs/*_notime.csv` (model without time-of-day features) |
-| Report | `python tools/build_report_pdf.py --repo-url <url>` | `Flock_Energy_REFIT_submission.pdf`: the four docs plus figures in one PDF under 1 MB (needs Edge or Chrome) |
+| Get data | `get_data.py` | `data/raw/` and `data/clean/` |
+| Part 1 | `part1_clean_raw.py` | the cleaned House 1 series, `outputs/raw_h1_*.csv`, `figures/p1_*.png` |
+| Part 2 | `part2_wm_eda.py` | `outputs/wm_*.csv`, `figures/p2_*.png` |
+| Part 3 | `part3_model.py` | `outputs/model_*.csv`, `figures/p3_*.png` |
+| Ablation | `REFIT_NO_TIME=1 python part3_model.py` | the same model without time-of-day features, saved as `outputs/*_notime.csv` |
+| PDF | `python tools/build_report_pdf.py --repo-url <url>` | rebuilds the submission PDF (needs Edge or Chrome) |
 
-The full run takes about 5 minutes on a laptop. XGBoost uses the GPU if one is available and falls back to the CPU otherwise. Seeds are fixed (`SEED = 42`). GPU training can still vary in the last decimal place.
-
-> The download links in the brief (`pureportal.strath.ac.uk/files/...`) return HTTP 403. `get_data.py` uses the equivalent `pure.strath.ac.uk/ws/portalfiles/portal/...` links.
-
-### Repository layout
+How the code is laid out:
 
 ```
-src/config.py         every path, house selection and threshold in one place
-src/clean_data.py     load an official cleaned csv -> 1-minute parquet cache
-src/cycles.py         washing-machine cycle rule (used for EDA and model filtering)
+src/config.py          paths, house choices and every threshold, all in one place
+src/clean_data.py      loads an official cleaned csv and turns it into a 1-minute cache
+src/cycles.py          the rule for spotting a washing-machine cycle
 src/part1_clean_raw.py, part2_wm_eda.py, part3_model.py, get_data.py
-run_all.py            end-to-end runner
-figures/  outputs/    generated plots and tables (committed so results are viewable)
-data/                 not committed (downloaded by get_data.py)
+run_all.py             runs everything in order
+figures/, outputs/     plots and tables, committed so you can see results without running anything
 ```
 
-## Key assumptions and preprocessing decisions
+## Main decisions and assumptions
 
-* **Clock.** The `Unix` column is the clock. Raw Part1 is converted from UK local time to UTC (DATA.md explains the evidence). All resampling is done in UTC to avoid daylight-saving duplicates, and local time is used only for hour-of-day analysis.
-* **1-minute resampling** uses the **mean** of the samples in each minute, so energy totals are kept. A minute with no samples stays **NaN**.
-* **Gaps:** gaps of 5 minutes or less are forward-filled. Longer gaps are flagged and never filled.
-* **Invalid values:** IAM > 4 kW, aggregate > 15 kW, negative values, and any appliance reading above the whole-house reading. These become **NaN, not 0**, so they are not mistaken for "off".
-* **Duplicates:** exact duplicate rows are dropped. Rows that share a timestamp but differ are merged, keeping the last non-missing value per column.
-* **Washing-machine target:** the readme's washing-machine channel. House 4 has two washing machines, so its target is their sum.
-* **The REFIT `Issues` flag is not used to drop data.** It fires on 17–47% of the minutes when the washing machine is running, so dropping those minutes would remove the events being modelled. Only minutes where the washing machine itself exceeds the aggregate are excluded.
-* **Cycle rule:** above 20 W counts as running; pauses of 15 minutes or less are bridged; a cycle needs at least 10 minutes, 0.05 kWh and a 200 W peak.
+**Timestamps.** I treat the `Unix` column as the clock. The older raw file turned out to store UK local time as if it were UTC, so I convert it (DATA.md explains how I worked that out). All resampling happens in UTC, and I only switch to local time when looking at what hour people wash.
 
-## Validation design
+**Resampling.** Each 1-minute value is the average of the readings inside that minute. Averaging power keeps energy totals correct. If a minute has no readings at all, it stays empty rather than being filled in.
 
-**Leave-one-house-out over 12 homes.** Each home is the test home once and is never used for training, early stopping or threshold selection in that fold. Inside the training homes, the last 20% of each home's timeline (by time) is used for early stopping. Overlapping 61-minute windows therefore cannot leak between train and test, and the test mimics the real use case: a new customer with no sub-metering. The baselines are always-off and an hour-of-week usage profile.
+**Gaps.** Gaps of up to 5 minutes get filled with the last known value. Anything longer is flagged as an outage and left empty, because I don't think it's defensible to invent hours or days of appliance use.
 
-## Trade-offs
+**Bad values.** Readings that can't be real are set to missing, not to zero: plug sensors above 4 kW, whole-house readings above 15 kW, negative numbers, and any appliance drawing more than the entire house. Setting them to zero would make them look like "appliance off".
 
-* **XGBoost on window features instead of a CNN (Seq2Point).** It is much faster to train 12 folds, easier to explain and inspect (feature importance, ablation), and good enough to clearly beat the baselines. The cost is that hand-made features probably capture the low motor tail less well than a CNN would.
-* **Imbalance handling.** Every minute near a cycle is kept, plus a 10% sample of other minutes with a weight of 10. This keeps training at about 1.1 M rows per fold without biasing the loss.
-* **Cycle filter after prediction.** It removes short false alarms and makes total energy much less biased, at the cost of some recall on unusual machines (House 19).
-* **Metrics.** Headline metrics are daily-energy and cycle-level, because per-minute MAE rewards predicting zero for an appliance that is off more than 90% of the time. MAE is still reported.
-* **House choice.** 12 of 20 homes are used. Homes with an ambiguous or changing washing-machine channel (6, 8, 9, 10, 11, 12, 13, 20) were left out rather than guessed at.
+**Duplicates.** Exact duplicate rows are dropped. When several rows share a timestamp but disagree, I keep the most recent non-missing value for each column.
+
+**What counts as the washing machine.** I use the channel the readme labels as the washing machine. House 4 has two washing machines, so there I add them together.
+
+**I didn't use the dataset's own "Issues" flag to drop data.** It sounds sensible, but it turns out to fire on 17 to 47% of the minutes when a washing machine is running. Dropping those minutes would throw away a big share of the washes I'm trying to model. Instead I only drop minutes where the washing machine alone reads higher than the whole house.
+
+**What counts as a wash.** The machine counts as running above 20 W. Pauses of up to 15 minutes are bridged, and a cycle has to last at least 10 minutes, use at least 0.05 kWh and peak above 200 W.
+
+## How I validated the model
+
+I used leave-one-house-out testing over all 12 homes. Each home takes a turn as the test home. While it's the test home, it plays no part in training, early stopping or picking any threshold. Inside the training homes, I hold back the last 20% of each home's timeline for early stopping.
+
+The reason for doing it this way: neighbouring 1-minute windows overlap almost completely, so a random split would leak nearly identical data into the test set and make the model look far better than it is. Testing on a home the model has never seen is also the honest version of the real use case, which is a new customer with no appliance-level metering. I compare against two baselines: predicting "off" all the time, and a typical hour-of-week usage profile.
+
+## Trade-offs I made
+
+- I used XGBoost on hand-made window features rather than a neural network like Seq2Point. It trains 12 folds in a few minutes, it's easy to inspect, and it already beats both baselines clearly. The cost is that it probably captures the quiet tail end of a wash less well than a CNN would.
+- The washing machine is off over 90% of the time, so I keep every minute near a real wash and a random 10% of the rest, giving those a weight of 10. That keeps training to about a million rows per fold without biasing the model.
+- After predicting, I keep only predictions that look like a complete wash (same rule as above). This removes a lot of short false alarms and makes the energy estimate much less biased, but it costs some detection on one unusual machine (House 19).
+- My headline metrics are daily energy and per-cycle detection, not per-minute error. Per-minute error rewards predicting zero for an appliance that's almost always off, so I report it but don't lean on it.
+- I used 12 of the 20 homes. The other eight have a washing-machine channel that is missing, unclear or changes during the study, and I'd rather leave them out than guess.
 
 ## AI tools used
 
-I wrote this repository with the help of **Claude (Anthropic) in Claude Code**, used as a pair programmer. It helped to:
-* find a working download path for the data;
-* write and debug the pipeline code;
-* investigate data issues: it ran the checks that revealed the Part1 local-time offset, the power-of-two glitch values, and the bias in the `Issues` flag;
-* draft the markdown documents.
+I used Claude (Anthropic's assistant, through Claude Code) as a coding partner on this project. It helped me get the data downloading when the official links failed, write and debug the scripts, run the checks that turned up the timestamp bug, the odd sensor values and the problem with the "Issues" flag, and draft the documents. I went through the outputs and decisions myself, and every number and plot in the write-ups comes straight from the code in this repo.
 
-All decisions, numbers and plots were checked against the pipeline's actual outputs. Every figure and table in the docs is produced by the code in this repo.
+## What I'd improve with more time
 
-## Possible improvements
+1. Add a second step that looks at each predicted wash as a whole and decides whether it's real. False alarms are the model's biggest weakness right now, with about 6 in 10 predicted washes being something else.
+2. Try a Seq2Point neural network on the same folds and compare.
+3. Add more homes once I've checked their channel labels by hand, and let the model adapt to a new home from a few confirmed washes.
+4. Give a range instead of a single number for monthly washing-machine energy, so an insight is only shown to a customer when the model is confident.
+5. Add unit tests for the cycle rule and the timezone conversion. At the moment they're only checked indirectly, through the comparison with the official data and the plots.
 
-1. A second-stage, event-level classifier that confirms predicted cycles, to reduce false alarms (currently ~61% of predicted washes).
-2. A Seq2Point CNN under the same leave-one-house-out folds, for comparison.
-3. More homes after manual channel checks, plus per-home adaptation from a few labelled washes or user feedback.
-4. Prediction intervals for monthly washing-machine kWh, so customer-facing insights can be held back when uncertain.
-5. Unit tests for the cycle rule and the timezone conversion. These are checked indirectly today, through the official-data comparison and the plots.
+## Citation
 
-## Data licence and citation
-
-REFIT data © University of Strathclyde, CC-BY 4.0. Murray, D., Stankovic, L. & Stankovic, V. *An electrical load measurements dataset of United Kingdom households from a two-year longitudinal study.* Scientific Data 4, 160122 (2017).
+REFIT data © University of Strathclyde, CC-BY 4.0. Murray, D., Stankovic, L. and Stankovic, V. (2017). An electrical load measurements dataset of United Kingdom households from a two-year longitudinal study. *Scientific Data* 4, 160122.

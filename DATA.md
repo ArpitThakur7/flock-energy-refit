@@ -1,167 +1,167 @@
-# DATA.md: coverage, quality findings and cleaning decisions
+# Data: coverage, quality and cleaning
 
-## 1. Dataset
+## 1. The dataset
 
-**REFIT Electrical Load Measurements** (University of Strathclyde; Murray et al., 2017, *Scientific Data* 4:160122). CC-BY 4.0.
+I used the REFIT Electrical Load Measurements dataset from the University of Strathclyde (Murray et al., 2017, *Scientific Data* 4:160122), which is released under CC-BY 4.0.
 
-| | |
-|---|---|
-| Households | 20 homes near Loughborough, UK (numbered 1–21, there is no House 14) |
-| Period | Sep 2013 – Jul 2015 (each house covers roughly 15–21 months) |
-| Channels per house | 1 whole-house current clamp ("Aggregate") + 9 Individual Appliance Monitors (IAMs, plug meters) |
-| Quantity / unit | Active power, **watts** |
-| Native sampling | Polled every ~6–8 s. Sensors are **not synchronised**: each reading may be up to 8 s old. |
-| Analysis resolution | **1 minute**, mean of the samples in each UTC minute (keeps energy totals) |
+It covers 20 homes around Loughborough in the UK, numbered 1 to 21 (there's no House 14), between September 2013 and July 2015. Each home was monitored for somewhere between 15 and 21 months. Every home has one current clamp on the main supply (the "aggregate", meaning the whole house) and nine plug-in monitors on individual appliances. All readings are active power in watts.
 
-**Files used**
+Readings come in roughly every 6 to 8 seconds. The sensors aren't synchronised with each other, so any given reading may be up to 8 seconds old. I worked at 1-minute resolution throughout, using the average of the readings in each minute.
 
-| Part | Files | Source archive |
+Files I used:
+
+| Part | Files | From |
 |---|---|---|
-| 1 (raw cleaning) | `RAW_House1_Part1.csv`, `RAW_House1_Part2.csv` | `REFIT_RAW_081116.7z` |
-| 2, 3 (EDA, model) | `CLEAN_House{1,2,3,4,5,7,15,16,17,18,19,21}.csv` | `CLEAN_REFIT_081116.7z` |
+| 1 (cleaning raw data) | `RAW_House1_Part1.csv`, `RAW_House1_Part2.csv` | `REFIT_RAW_081116.7z` |
+| 2 and 3 (analysis and model) | `CLEAN_House{1,2,3,4,5,7,15,16,17,18,19,21}.csv` | `CLEAN_REFIT_081116.7z` |
 
-> **Download note:** the `pureportal.strath.ac.uk/files/...` links in the brief return HTTP 403. The same files are served at `pure.strath.ac.uk/ws/portalfiles/portal/<id>/<name>`, and `src/get_data.py` uses those links.
+The download links in the brief returned "403 Forbidden" for me. The same files are available at `pure.strath.ac.uk/ws/portalfiles/portal/<id>/<filename>`, which is what `src/get_data.py` uses.
 
-**Known dataset limitations (from the readme and our checks)**
-* Appliance labels describe what was plugged in *at installation*. Householders may have moved IAMs later, and the readme lists several changes.
-* "Television site" and "computer site" IAMs can include several devices.
-* IAMs only measure plug loads. Hard-wired loads (electric shower, oven, immersion heater) appear only in the aggregate, so they are never directly labelled.
-* The cleaned files forward-fill short NaNs and replace IAM spikes above 4 kW with 0. Long outages are simply absent (no rows).
-* There are periods of missing data, notably February 2014. It was caused by internet, hardware and routing failures.
+Some limitations worth knowing about up front:
+
+- The appliance labels describe what was plugged in when the monitors were installed. Householders sometimes moved them later, and the readme lists several known changes.
+- A "television site" or "computer site" monitor can cover several devices on one extension lead.
+- Plug monitors only see plug-in appliances. Hard-wired loads like an electric shower, oven or immersion heater only ever show up in the whole-house reading, so they're never labelled.
+- The official cleaned files fill short gaps with the previous value and replace plug readings above 4 kW with zero. Long outages simply have no rows.
+- There are some long stretches of missing data, especially in February 2014. The readme puts these down to internet, hardware and network failures.
 
 ---
 
-## 2. Part 1: Raw House 1 inspection findings
+## 2. What I found in the raw House 1 data
 
-Produced by `src/part1_clean_raw.py`, which writes `outputs/raw_h1_inspection.csv`.
+These numbers come from `src/part1_clean_raw.py`, which saves them to `outputs/raw_h1_inspection.csv`.
 
-| Check | Part1 (Oct 2013 – Oct 2014) | Part2 (Jun 2014 – Jul 2015) |
+| Check | Part1 (Oct 2013 to Oct 2014) | Part2 (Jun 2014 to Jul 2015) |
 |---|---|---|
 | Rows | 4,377,877 | 4,140,886 |
-| Timestamp parse failures | 0 | 0 |
-| Out-of-order steps | **1** (27 Oct 2013 clock change, see below) | 0 |
-| Duplicate timestamps | **1,004,404** | 14,755 |
-| … of which exact duplicate rows | 884,307 | 393 |
-| Median / 99th pct. interval | 3 s / 15 s | 7 s / 9 s |
-| Gaps > 5 min / > 1 h | 380 / 14 | 72 / 19 |
-| Longest gap | **998 h (41.6 days, 24 Jan – 6 Mar 2014)** | 208 h |
-| Missing cells | 0% (unavailable sensors were written as **0**) | 12.8% (written as **NaN**) |
-| Aggregate > 15 kW | 82 (max 24,000 W) | 104 (max 29,159 W) |
-| IAM > 4 kW | 3,038 | 911 |
-| Largest IAM value | 98,301 W | 98,301 W |
+| Timestamps that failed to parse | 0 | 0 |
+| Times where the clock goes backwards | 1 | 0 |
+| Repeated timestamps | 1,004,404 | 14,755 |
+| ...of which the whole row is a copy | 884,307 | 393 |
+| Typical gap between readings | 3 s (99% under 15 s) | 7 s (99% under 9 s) |
+| Gaps longer than 5 min / 1 hour | 380 / 14 | 72 / 19 |
+| Longest gap | 998 hours (41.6 days, 24 Jan to 6 Mar 2014) | 208 hours |
+| Missing cells | 0% (sensors that weren't reporting were written as 0) | 12.8% (written as blank) |
+| Whole-house readings over 15 kW | 82 (highest 24,000 W) | 104 (highest 29,159 W) |
+| Plug readings over 4 kW | 3,038 | 911 |
+| Highest plug reading | 98,301 W | 98,301 W |
 | Negative values | 0 | 0 |
 
-### Key findings
+The things that stood out:
 
-1. **The Part1 timestamps are in local time, not UTC.** Part1 was logged in UK wall-clock time but stored as if it were UTC. The evidence:
-   * The only backwards step is `2013-10-27 01:59:59 → 01:00:01`, which is the autumn clock change: the hour 01:00–02:00 appears twice.
-   * The 01:00 hour is missing on 30 Mar 2014 (the spring clock change).
-   * When raw readings are matched to the official cleaned file, Part1 lines up at an offset of **−3600 s from April to October** and **0 s from November to March**. Part2 lines up at 0 s all year, so Part2 is already UTC.
+1. **The older file (Part1) is in local time, not UTC.** It recorded UK clock time but stored it as if it were UTC. Three things gave this away:
 
-   Ignoring this would misplace every summer reading by an hour, and it would put one autumn hour in the wrong order.
+    - The single place where the clock jumps backwards is `2013-10-27 01:59:59` to `01:00:01`. That's exactly when the clocks went back that autumn, so the hour from 1am to 2am appears twice.
+    - The 1am hour is missing on 30 March 2014, when the clocks went forward.
+    - When I lined up raw readings against the official cleaned file, Part1 matched with a one-hour shift from April to October and no shift from November to March. Part2 matched with no shift all year, so Part2 was already in UTC.
 
-2. **The two files overlap from 27 Jun to 1 Oct 2014.** In that window they disagree: only 20% of shared timestamps carry the same aggregate value. The official cleaned file follows Part1 there.
+    If I'd ignored this, every summer reading would be an hour out, and one autumn hour would be out of order.
 
-3. **Sensor error codes.** IAM values of 4096, 8192, 16384, 32767, 65535 and 98301 W are integer-overflow or bit-error codes. A plug socket cannot deliver more than about 3 kW. Glitches also occur at lower values: for example, the washing-machine IAM reads 2048 W while the whole house is drawing 190 W.
+2. **The two files overlap from 27 June to 1 October 2014,** and they don't agree there: only 20% of the timestamps they share have the same whole-house reading. The official cleaned file follows Part1 for that period.
 
-4. **Massive duplication in Part1.** A quarter of Part1 rows repeat an earlier timestamp, and most of them are exact copies. Part2 instead spreads one poll over several partial rows, each holding a different subset of sensors with NaNs in the others.
+3. **There are sensor error codes in the data.** Plug readings of 4,096, 8,192, 16,384, 32,767, 65,535 and 98,301 W are integer overflow or bit errors. A plug socket can't deliver much more than 3 kW. Some glitches are lower and harder to spot. For example, the washing machine monitor at one point reads 2,048 W while the whole house is only drawing 190 W.
 
-5. **Aggregate above 15 kW.** There are 186 readings in total (up to 29 kW). They are not physically impossible for a 100 A supply, but they far exceed this home's normal peak of about 10–12 kW, which comes from short, kettle- or shower-like spikes. I treat them as invalid.
+4. **Part1 has a huge amount of duplication.** About a quarter of its rows repeat an earlier timestamp, and most are exact copies. Part2 has a different quirk: a single reading is split across several rows, each with some sensors filled in and the others blank.
+
+5. **A few whole-house readings are above 15 kW,** 186 in total, up to 29 kW. That isn't strictly impossible on a 100 A supply, but this home normally peaks at around 10 to 12 kW in short bursts (a kettle or shower), so I treated them as bad readings.
 
 ---
 
-## 3. Part 1: Cleaning pipeline (House 1 raw → 1 minute)
+## 3. How I cleaned House 1
 
-Each step and its count is logged to `outputs/raw_h1_steps.csv`.
+Every step and its counts are logged in `outputs/raw_h1_steps.csv`.
 
-| # | Step | Rule | Effect |
-|---|---|---|---|
-| 1 | Parse | `Unix` column is the clock; `Time` is only its string form | 0 failures |
-| 2 | Timezone | Part1: treat Unix as `Europe/London` wall time and convert to UTC. In the repeated hour the **file order** decides BST (first pass) vs GMT (second pass). Part2 is unchanged. | 2,795,917 Part1 rows shifted 1 h |
-| 3 | Overlap | Use Part1 up to its last reading (1 Oct 2014 00:27 UTC) and Part2 after that. Part1 is denser in the overlap and matches the official data. | 944,950 Part2 rows dropped |
-| 4 | Invalid values → NaN | IAM > 4,000 W, aggregate > 15,000 W, negative values. **NaN, not 0**, so they are not mistaken for "off". | 3,895 IAM + 171 aggregate readings |
-| 5 | Sort and duplicates | Stable sort by timestamp. Drop exact duplicate rows. Rows with the same timestamp but different values are merged per column, **keeping the last non-missing value** (the most recent poll). This also re-assembles Part2's split rows. | 884,254 dropped, 131,831 merged |
-| 6 | Resample | Mean per UTC minute | 920,091 minutes |
-| 6b | Consistency | An IAM minute above 1.1 × aggregate + 50 W is impossible (one appliance can't use more than the whole house) → NaN. This catches glitches under 4 kW. | 3,821 IAM-minutes (2,498 on the electric heater) |
-| 7 | Short gaps | Gaps of **≤ 5 min** are forward-filled. A sensor that skips a report usually means "no change", and 5 min is short compared with any appliance cycle. | 812 minutes filled |
-| 7 | Long gaps | Gaps **> 5 min are left as NaN**, flagged in an `outage` column and listed in `outputs/raw_h1_outages.csv` | 408 outages, 121,355 min (13.2% of the span) |
-
-**Outage profile:** 384 outages of 5–60 min, 12 of 1–24 h, and 12 longer than a day. The longest is 41.6 days (24 Jan – 6 Mar 2014), followed by 8.6 days (May 2015) and 7.5 days (June 2015). These are not filled because there is no defensible way to invent days of appliance behaviour. They stay NaN, and downstream steps must skip them.
-
-**Validation against the official cleaned file** (1-minute aggregate, 797,815 shared minutes):
-
-| | Correlation with official | Mean absolute error |
+| Step | What I did | How much it changed |
 |---|---|---|
-| Raw as recorded (no cleaning) | 0.768 | 89.5 W |
-| **Our pipeline** | **0.997** | **4.4 W** |
+| 1. Read | Used the `Unix` column as the clock. The `Time` column is just a text copy of it. | No failures |
+| 2. Fix the timezone | Converted Part1 from UK local time to UTC. For the hour that appears twice in October, I used the order of rows in the file to tell the first pass (summer time) from the second (winter time). Part2 was left alone. | 2,795,917 Part1 rows moved by an hour |
+| 3. Handle the overlap | Used Part1 up to its last reading (1 Oct 2014, 00:27 UTC) and Part2 only after that. Part1 has more readings in the overlap and matches the official data. | 944,950 Part2 rows dropped |
+| 4. Remove impossible values | Plug readings over 4 kW, whole-house readings over 15 kW, and negative values set to missing, not zero, so they don't look like "off". | 3,895 plug and 171 whole-house readings |
+| 5. Sort and de-duplicate | Sorted by time, dropped exact duplicate rows, and merged rows sharing a timestamp by keeping the latest non-missing value in each column. This also stitches Part2's split rows back together. | 884,254 dropped, 131,831 merged |
+| 6. Resample | Took the average of each UTC minute. | 920,091 minutes |
+| 6b. Sanity check | An appliance can't use more than the whole house, so any appliance minute above 1.1 times the whole-house reading plus 50 W was set to missing. This catches glitches under 4 kW. | 3,821 appliance-minutes (2,498 of them on the electric heater) |
+| 7a. Short gaps | Filled gaps of 5 minutes or less with the last value. A sensor skipping a report usually just means nothing changed, and 5 minutes is short next to any appliance cycle. | 812 minutes filled |
+| 7b. Long gaps | Left anything longer as missing, marked it in an `outage` column and listed it in `outputs/raw_h1_outages.csv`. | 408 outages, 121,355 minutes (13.2% of the period) |
 
-So the simple pipeline reproduces the official cleaning very closely. Nearly all of the improvement comes from the timezone fix and the overlap rule.
+There were 384 outages between 5 minutes and an hour long, 12 between an hour and a day, and 12 longer than a day. The longest was 41.6 days (24 January to 6 March 2014), then 8.6 days in May 2015 and 7.5 days in June 2015. I didn't fill any of these. There's no honest way to make up days of appliance use, so they stay missing and later steps skip over them.
 
-**Figures**
-* `figures/p1_before_after_week.png`: aggregate, washing machine and fridge for 4 days, before and after cleaning. Sensor-code spikes (fridge "2,000 W", washing machine "4,096 W") disappear, and the summer data moves by 1 h.
-* `figures/p1_before_after_outage.png`: Feb–Mar 2014. The 41-day outage is kept as a visible gap.
-* `figures/p1_daily_coverage.png`: the percentage of minutes with a reading, day by day.
+**Checking the result.** I compared my cleaned whole-house series with the official cleaned version over the 797,815 minutes where both have data:
+
+| | Correlation with the official data | Average difference |
+|---|---|---|
+| Raw data as recorded | 0.768 | 89.5 W |
+| After my cleaning | 0.997 | 4.4 W |
+
+So a fairly simple pipeline gets very close to the official one. Almost all of the improvement comes from fixing the timezone and handling the overlap correctly.
+
+The plots:
+
+- `figures/p1_before_after_week.png` shows four days of the whole-house, washing machine and fridge readings, before and after cleaning. The fake fridge spike of about 17,000 W disappears, the fridge's normal on/off pattern becomes visible, and summer readings move by an hour.
+- `figures/p1_before_after_outage.png` covers February and March 2014, with the 41-day outage left as a visible gap.
+- `figures/p1_daily_coverage.png` shows, day by day, what share of minutes have a reading.
 
 ![House 1 before/after, 4 days](figures/p1_before_after_week.png)
 
 ![House 1 Feb-Mar 2014 outage](figures/p1_before_after_outage.png)
 
-**Two differences from the official pipeline.** We set invalid IAM values to NaN, where the official file sets them to 0. We also do not re-map IAMs that householders moved between appliances. That would need per-house manual review, which the brief puts out of scope.
+My cleaning differs from the official version in two ways. I set bad plug readings to missing where the official version sets them to zero. And I didn't try to reassign monitors that householders moved between appliances, since that needs a manual review of each house and the brief says it's out of scope.
 
 ---
 
-## 4. Parts 2–3: Cleaned data used for the washing-machine analysis
+## 4. The cleaned data I used for the washing-machine work
 
-**Houses and channels.** I used every house where the readme names a washing machine and there is no ambiguity (12 houses):
+**Which homes.** I used every home where the readme clearly names a washing machine. That came to 12:
 
-| House | WM channel(s) | Notes |
+| House | Washing machine channel | Notes |
 |---|---|---|
-| 1 | Appliance5 | House also has a **washer-dryer** (Appliance4), which is not in the target: a confounder |
+| 1 | Appliance5 | This house also has a washer-dryer (Appliance4). It isn't part of the target, so it will confuse the model. |
 | 2, 3, 7, 15, 16, 17, 18, 19, 21 | as listed in `src/config.py` | |
-| 4 | Appliance4 **+** Appliance5 | Two washing machines. The target is their **sum**, because both leave the same footprint in the aggregate. |
-| 5 | Appliance3 | The model (AEG L99695HWD) is actually a **washer-dryer**, so its drying cycles look different |
+| 4 | Appliance4 plus Appliance5 | Two washing machines, so I add them together. They look the same in the whole-house signal either way. |
+| 5 | Appliance3 | The model number (AEG L99695HWD) shows it's actually a washer-dryer, so its drying runs look different. |
 
-Houses 8 and 9 are excluded because their "washing machine" and "washer dryer" channels are hard to tell apart. Houses 6, 10, 11, 12, 13 and 20 are excluded because the channel is missing, unlabelled (`???`) or changes part-way through. They could be added later.
+I left out Houses 8 and 9 because their washing machine and washer-dryer channels are hard to tell apart. Houses 6, 10, 11, 12, 13 and 20 have a washing-machine channel that's missing, unlabelled or changes partway through. They could be added later after a closer look.
 
-**Resampling.** Mean per UTC minute of the ~8 s samples (`src/clean_data.py`). A minute with no samples stays NaN, so outages are counted, not filled. Local time (`Europe/London`) is only used for hour-of-day and weekday analysis.
+**Resampling.** Same idea as Part 1: the average of the readings in each UTC minute (see `src/clean_data.py`). Minutes with no readings stay missing, so outages get counted rather than filled. I only use local UK time for the hour-of-day and day-of-week analysis.
 
-**Availability and quality** (written to `outputs/wm_quality.csv`)
+**Coverage and quality** (saved as `outputs/wm_quality.csv`):
 
-| House | Period | Missing minutes | Gaps > 1 h | Issues flag (all min.) | WM ≤ 20 W | Cycles | Cycles/week |
+| House | Period | Missing minutes | Gaps over 1 h | "Issues" flag | Washing machine off | Cycles | Cycles per week |
 |---|---|---|---|---|---|---|---|
-| 1 | 2013-10-09 → 2015-07-10 | 12.6% | 22 | 2.1% | 98.1% | 379 | 4.8 |
-| 2 | 2013-09-17 → 2015-05-28 | 24.6% | 78 | 2.0% | 95.3% | 320 | 4.8 |
-| 3 | 2013-09-25 → 2015-06-02 | 11.4% | 17 | 7.7% | 94.3% | 633 | 8.1 |
-| 4 | 2013-10-11 → 2015-07-07 | 13.7% | 212 | 3.1% | 98.5% | 256 | 3.3 |
-| 5 | 2013-09-26 → 2015-07-06 | 9.3% | 203 | 8.4% | 92.3% | 693 | 8.3 |
-| 7 | 2013-11-01 → 2015-07-08 | 12.6% | 23 | 4.6% | 91.6% | 834 | 10.9 |
-| 15 | 2013-12-17 → 2015-07-08 | 13.7% | 198 | 1.6% | 97.1% | 249 | 3.6 |
-| 16 | 2014-01-10 → 2015-07-08 | 17.3% | 201 | 1.0% | 96.3% | 307 | 4.8 |
-| 17 | 2014-03-06 → 2015-06-19 | 6.2% | 13 | 4.3% | 97.6% | 279 | 4.4 |
-| 18 | 2014-03-07 → 2015-05-24 | 5.8% | 14 | 5.8% | 98.8% | 132 | 2.2 |
-| 19 | 2014-03-06 → 2015-06-20 | 6.5% | 12 | 4.1% | 96.1% | 255 | 4.1 |
-| 21 | 2014-03-07 → 2015-07-10 | 9.4% | 15 | 5.4% | 96.9% | 229 | 3.6 |
+| 1 | Oct 2013 to Jul 2015 | 12.6% | 22 | 2.1% | 98.1% | 379 | 4.8 |
+| 2 | Sep 2013 to May 2015 | 24.6% | 78 | 2.0% | 95.3% | 320 | 4.8 |
+| 3 | Sep 2013 to Jun 2015 | 11.4% | 17 | 7.7% | 94.3% | 633 | 8.1 |
+| 4 | Oct 2013 to Jul 2015 | 13.7% | 212 | 3.1% | 98.5% | 256 | 3.3 |
+| 5 | Sep 2013 to Jul 2015 | 9.3% | 203 | 8.4% | 92.3% | 693 | 8.3 |
+| 7 | Nov 2013 to Jul 2015 | 12.6% | 23 | 4.6% | 91.6% | 834 | 10.9 |
+| 15 | Dec 2013 to Jul 2015 | 13.7% | 198 | 1.6% | 97.1% | 249 | 3.6 |
+| 16 | Jan 2014 to Jul 2015 | 17.3% | 201 | 1.0% | 96.3% | 307 | 4.8 |
+| 17 | Mar 2014 to Jun 2015 | 6.2% | 13 | 4.3% | 97.6% | 279 | 4.4 |
+| 18 | Mar 2014 to May 2015 | 5.8% | 14 | 5.8% | 98.8% | 132 | 2.2 |
+| 19 | Mar 2014 to Jun 2015 | 6.5% | 12 | 4.1% | 96.1% | 255 | 4.1 |
+| 21 | Mar 2014 to Jul 2015 | 9.4% | 15 | 5.4% | 96.9% | 229 | 3.6 |
 
-The washing machine is "off" (≤ 20 W) for 92–99% of available minutes. That class imbalance drives the metric choices in RESULTS.md.
+"Off" here means 20 W or less. In every home the washing machine is off between 92% and 99% of the time. That imbalance matters a lot when choosing how to measure the model, which I come back to in RESULTS.md.
 
-### The official `Issues` flag is biased toward washing-machine use
+### The dataset's "Issues" flag is biased against washing machines
 
-The readme suggests discarding rows where `Issues = 1` (sum of the 9 IAMs > aggregate). We checked when it fires:
+The readme suggests throwing away rows where the `Issues` column is 1, which marks moments when the nine plug monitors add up to more than the whole-house reading. Before doing that, I checked when it actually fires:
 
 | House | 1 | 2 | 3 | 4 | 5 | 7 | 15 | 16 | 17 | 18 | 19 | 21 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Issues share of all minutes | 2% | 2% | 8% | 3% | 8% | 5% | 2% | 1% | 4% | 6% | 4% | 5% |
-| Issues share of **WM-on** minutes | 33% | 17% | 27% | 41% | 30% | 23% | 36% | 5% | 47% | 22% | 34% | 37% |
-| WM alone > aggregate (WM-on minutes) | 5.0% | 0.4% | 4.5% | 2.8% | 4.9% | 0.9% | 1.7% | 0.2% | 2.6% | 0.4% | 1.2% | 9.0% |
+| Flagged, out of all minutes | 2% | 2% | 8% | 3% | 8% | 5% | 2% | 1% | 4% | 6% | 4% | 5% |
+| Flagged, out of minutes when the washing machine is on | 33% | 17% | 27% | 41% | 30% | 23% | 36% | 5% | 47% | 22% | 34% | 37% |
+| Washing machine alone reads higher than the whole house | 5.0% | 0.4% | 4.5% | 2.8% | 4.9% | 0.9% | 1.7% | 0.2% | 2.6% | 0.4% | 1.2% | 9.0% |
 
-The flag fires **5–10× more often while the washing machine runs**. When nine unsynchronised meters are summed during a 2 kW load, a few seconds of lag easily pushes the sum above the clamp reading. Dropping flagged minutes would therefore remove a large part of the very events we want to model. **Decision:** keep flagged minutes, and exclude only minutes where the *washing machine on its own* exceeds 1.1 × aggregate + 50 W (physically impossible for the target).
+The flag goes off five to ten times more often while the washing machine is running. That makes sense once you think about it. Adding up nine unsynchronised monitors during a 2 kW load means a few seconds of lag can easily push the total over the clamp reading. So following the readme's advice would quietly remove a large part of the very thing I'm trying to model.
+
+What I did instead was keep the flagged minutes and only drop minutes where the washing machine on its own reads more than 1.1 times the whole house plus 50 W, which genuinely can't happen.
 
 ---
 
-## 5. Remaining concerns
+## 5. Things I'm still not fully comfortable with
 
-* **Appliance re-assignment.** I trust the readme's channel labels. If an IAM was moved to another appliance part-way through, the "ground truth" is wrong for that period.
-* **Back-to-back washes.** The 15-minute bridging rule merges washes run one after another into one long cycle (see House 5 and House 21 in `p2_detected_cycles.png`). This inflates per-cycle duration and energy and lowers cycle counts somewhat.
-* **Washer-dryers** (House 5, and the confounding one in House 1) have drying phases that do not look like washing.
-* **Unlabelled big loads.** Electric showers, ovens and immersion heaters are in the aggregate but never metered. They are the main source of false positives (see RESULTS.md).
-* **Part1 zeros.** Before Part2, unavailable sensors were written as 0, so in Part1 "off" and "not reporting" cannot be told apart. This mainly affects IAM channels, because the aggregate is almost never 0.
+- **Moved monitors.** I trust the readme's labels. If someone moved a monitor to a different appliance partway through, the "true" washing machine values are wrong for that stretch.
+- **Back-to-back washes.** Because pauses of up to 15 minutes get bridged, two washes run one after the other can merge into one long cycle. You can see this for Houses 5 and 21 in `p2_detected_cycles.png`. It makes some cycles look longer and more energy-hungry than they are, and slightly undercounts washes.
+- **Washer-dryers.** House 5's machine, and the extra one in House 1, have drying phases that don't look like a normal wash.
+- **Big unlabelled loads.** Showers, ovens and immersion heaters are in the whole-house reading but never metered on their own. They're the main reason the model raises false alarms.
+- **Zeros in Part1.** Before Part2, a sensor that wasn't reporting was written as 0, so in Part1 there's no way to tell "off" from "not reporting". This mostly affects the plug monitors, since the whole-house reading is almost never zero.
