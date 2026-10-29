@@ -100,9 +100,9 @@ The plots:
 - `figures/p1_before_after_outage.png` covers February and March 2014, with the 41-day outage left as a visible gap.
 - `figures/p1_daily_coverage.png` shows, day by day, what share of minutes have a reading.
 
-![House 1 before/after, 4 days](figures/p1_before_after_week.png)
+![House 1, raw vs cleaned over four days: sensor error spikes removed and summer readings shifted back by an hour](figures/p1_before_after_week.png)
 
-![House 1 Feb-Mar 2014 outage](figures/p1_before_after_outage.png)
+![House 1, February to March 2014: the 41-day outage is left as a gap instead of being filled](figures/p1_before_after_outage.png)
 
 My cleaning differs from the official version in two ways. I set bad plug readings to missing where the official version sets them to zero. And I didn't try to reassign monitors that householders moved between appliances, since that needs a manual review of each house and the brief says it's out of scope.
 

@@ -28,7 +28,7 @@ The full table is in DATA.md. In short:
 
 ### A typical day
 
-![representative day](figures/p2_representative_day.png)
+![A typical washing day in House 2 (23 Sep 2014): whole-house power with the washing machine shaded](figures/p2_representative_day.png)
 
 This is House 2 on Tuesday 23 September 2014. I chose it because the data is complete for the whole day and the wash uses a typical amount of energy for that home.
 
@@ -38,7 +38,7 @@ What this tells me is that a wash's energy is dominated by one block of heating,
 
 ### Examples of detected washes
 
-![detected cycles](figures/p2_detected_cycles.png)
+![Three detected washes per home, aligned at the start of each cycle](figures/p2_detected_cycles.png)
 
 These are three washes from each home (the earliest, one from the middle and the latest), lined up by start time. Nearly all of them share the same shape: a block at 1.8 to 2.6 kW for 5 to 25 minutes, then 30 to 80 minutes of low motor activity.
 
@@ -46,7 +46,7 @@ A few show two heating blocks. Those are either hotter or longer programmes, or 
 
 ### Comparing homes
 
-![cross house](figures/p2_cross_house.png)
+![Wash length, energy per wash and peak power compared across the 12 homes](figures/p2_cross_house.png)
 
 | House | Washes | Typical length (min) | Typical energy (kWh) | Typical peak (W) | Share at weekends | Most common start time |
 |---|---|---|---|---|---|---|
@@ -69,7 +69,7 @@ So the programme people pick, mostly how hot they wash, matters about as much as
 
 ### When people wash
 
-![usage patterns](figures/p2_usage_patterns.png)
+![When washes start: hour of day and day of week, per home and pooled](figures/p2_usage_patterns.png)
 
 Across all homes, 44% of washes start between 7am and noon, with the busiest time being 8 to 10am, and there's a smaller bump in the early evening between 5 and 7pm. Two homes are very different:
 
@@ -171,21 +171,21 @@ The wash filter mainly removes made-up energy. The average total error moves fro
 
 A good example is House 15 on 31 January 2015 (`figures/p3_actual_vs_pred_h15.png`). The model gets the heating block and its timing almost exactly right. It partly misses the low tail afterwards, which is why House 15's energy comes out too low overall.
 
-![h15](figures/p3_actual_vs_pred_h15.png)
+![Good case: House 15, unseen during training. Predicted washing-machine power closely tracks the real thing](figures/p3_actual_vs_pred_h15.png)
 
 Here is daily energy for every test home (`figures/p3_daily_energy_scatter.png`); a perfect model would put every point on the dashed line. The model separates washing days from non-washing days well in most homes (correlations of 0.5 to 0.86), but it pulls the big washing days down towards the middle.
 
-![daily scatter](figures/p3_daily_energy_scatter.png)
+![Daily washing-machine energy, actual vs predicted, for each unseen test home](figures/p3_daily_energy_scatter.png)
 
 ### Where it goes wrong
 
 **1. A washing machine that doesn't look like the others (House 19).** See `figures/p3_actual_vs_pred_h19.png`. This machine heats in short 1.3 to 1.6 kW bursts rather than one long 2 kW block, and mostly runs at night. None of the 11 training homes has a machine like it, so the model misses 83% of its washes. On the same day, it also mistakes two 2.4 kW blocks from something else, probably a dishwasher or oven, for washes (at about 1:40pm and 6:45pm). An unusual machine in a new home is the biggest risk for this kind of model. A few confirmed washes from that home, or simply asking the customer "did you do a wash today?", would help more than anything else.
 
-![h19](figures/p3_actual_vs_pred_h19.png)
+![Failure case: House 19 heats in short bursts the model has not seen, and another appliance is mistaken for a wash](figures/p3_actual_vs_pred_h19.png)
 
 **2. Busy homes with lots of heating appliances (Houses 3 and 21, both 62% too high).** See `figures/p3_actual_vs_pred_h3.png`. When the house is full of 2 to 6 kW loads, such as showers, cookers, tumble dryers or a dishwasher heating up, some of them get labelled as washes. Real washes that overlap another big load get underestimated, because the heating block is buried inside something bigger. House 1 has a related problem: its washer-dryer isn't part of the target, but it produces genuinely wash-like cycles, so when the model spots them correctly they still count as false alarms.
 
-![h3](figures/p3_actual_vs_pred_h3.png)
+![Failure case: House 3 has many overlapping heating loads, causing false alarms](figures/p3_actual_vs_pred_h3.png)
 
 ### Papers I drew on
 
