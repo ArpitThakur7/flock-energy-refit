@@ -6,3 +6,4 @@ __pycache__/
 .claude/
 outputs/run_all.log
 tools/_report.html
+Flock_Energy_REFIT_submission.pdf
