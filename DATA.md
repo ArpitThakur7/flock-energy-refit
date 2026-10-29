@@ -59,9 +59,13 @@ Produced by `src/part1_clean_raw.py`, which writes `outputs/raw_h1_inspection.cs
    * When raw readings are matched to the official cleaned file, Part1 lines up at an offset of **−3600 s from April to October** and **0 s from November to March**. Part2 lines up at 0 s all year, so Part2 is already UTC.
 
    Ignoring this would misplace every summer reading by an hour, and it would put one autumn hour in the wrong order.
+
 2. **The two files overlap from 27 Jun to 1 Oct 2014.** In that window they disagree: only 20% of shared timestamps carry the same aggregate value. The official cleaned file follows Part1 there.
+
 3. **Sensor error codes.** IAM values of 4096, 8192, 16384, 32767, 65535 and 98301 W are integer-overflow or bit-error codes. A plug socket cannot deliver more than about 3 kW. Glitches also occur at lower values: for example, the washing-machine IAM reads 2048 W while the whole house is drawing 190 W.
+
 4. **Massive duplication in Part1.** A quarter of Part1 rows repeat an earlier timestamp, and most of them are exact copies. Part2 instead spreads one poll over several partial rows, each holding a different subset of sensors with NaNs in the others.
+
 5. **Aggregate above 15 kW.** There are 186 readings in total (up to 29 kW). They are not physically impossible for a 100 A supply, but they far exceed this home's normal peak of about 10–12 kW, which comes from short, kettle- or shower-like spikes. I treat them as invalid.
 
 ---
@@ -97,6 +101,10 @@ So the simple pipeline reproduces the official cleaning very closely. Nearly all
 * `figures/p1_before_after_week.png`: aggregate, washing machine and fridge for 4 days, before and after cleaning. Sensor-code spikes (fridge "2,000 W", washing machine "4,096 W") disappear, and the summer data moves by 1 h.
 * `figures/p1_before_after_outage.png`: Feb–Mar 2014. The 41-day outage is kept as a visible gap.
 * `figures/p1_daily_coverage.png`: the percentage of minutes with a reading, day by day.
+
+![House 1 before/after, 4 days](figures/p1_before_after_week.png)
+
+![House 1 Feb-Mar 2014 outage](figures/p1_before_after_outage.png)
 
 **Two differences from the official pipeline.** We set invalid IAM values to NaN, where the official file sets them to 0. We also do not re-map IAMs that householders moved between appliances. That would need per-house manual review, which the brief puts out of scope.
 

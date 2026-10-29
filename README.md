@@ -30,6 +30,7 @@ python run_all.py
 | Part 2 | `src/part2_wm_eda.py` | `outputs/wm_quality.csv`, `wm_cycles.csv`, `wm_cycle_summary.csv`, `figures/p2_*.png` |
 | Part 3 | `src/part3_model.py` | `outputs/model_metrics*.csv`, `model_daily_energy.csv`, `model_feature_importance.csv`, `figures/p3_*.png` |
 | Ablation | `REFIT_NO_TIME=1 python src/part3_model.py` | `outputs/*_notime.csv` (model without time-of-day features) |
+| Report | `python tools/build_report_pdf.py --repo-url <url>` | `Flock_Energy_REFIT_submission.pdf`: the four docs plus figures in one PDF under 1 MB (needs Edge or Chrome) |
 
 The full run takes about 5 minutes on a laptop. XGBoost uses the GPU if one is available and falls back to the CPU otherwise. Seeds are fixed (`SEED = 42`). GPU training can still vary in the last decimal place.
 
